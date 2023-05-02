@@ -1,0 +1,588 @@
+#
+## Introducción
+
+Se va a realizar un **proceso de limpieza de los datos**.
+
+El dataset que se escogió se sacó de la Dirección General de Tráfico (DGT) y correspondía a tres documentos CSV con datos de los accidentes producidos a lo largo del año 2015 en España. 
+https://sedeapl.dgt.gob.es/WEB_IEST_CONSULTA/subcategoria.faces
+
+Para el objetivo es necesario hacer uso de los tres documentos, ya que hay atributos de interés en todos ellos. Se va a realizar una limpieza de los datos para que quede un solo dataset útil y se pueda utilizar para realizar todo el procesamiento y la extracción del valor al finalizar el proceso KDD.
+
+En el siguiente apartado se va a dar un poco de contexto teórico de lo que representa una limpieza de datos.
+
+##Contexto
+
+En este apartado se va a dar un poco de contexto de lo que representa el proceso de limpieza de los datos. 
+La limpieza de los datos es un proceso de mucha importancia, ya que trata de identificar y corregir errores, inconsistencias y duplicados que se puedan encontrar en los datos que se tienen antes de realizar todo el análisis de los mismos. El proceso de limpieza de los datos es esencial para garantizar la clidad e integridad de los datos utilizados en el análisis. Además, puede mejorar significativamente la precisión y la eficiencia de los modelos de minería de datos que se apliquen.
+Este proceso pued eincluir la eliminación de valores atípicos u outliers, la corrección de errores tipográficos, la normalización de los datos y la resolución de conflictos de datos. Además, también puede ayudar a identificar y eliminar datos faltantes o incompletos, lo que puede ser una tarea fundamental para asegurar la validez y la utilidad de los modelos de datos resultantes.
+
+##Desarrollo
+
+En este apartado se realizará todo el desarrollo del trabajo de limpieza de datos.
+
+###Información inicial
+
+En este primer apartado del desarrollo se van a realizar varias consultar para conocer el conjunto de los datos. De esta forma se sabrá sus dimensiones y el tipo de datos que contienen.
+
+Lo primero a realizar es la importación de las librerías necesarias para poder trabajar con los datos.
+"""
+
+# Commented out IPython magic to ensure Python compatibility.
+# import packages
+import pandas as pd
+import numpy as np
+import seaborn as sns
+
+import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
+import matplotlib
+plt.style.use('ggplot')
+from matplotlib.pyplot import figure
+
+# %matplotlib inline
+matplotlib.rcParams['figure.figsize'] = (12,8)
+
+pd.options.mode.chained_assignment = None
+
+"""Se conecta Google Colab con Drive para poder acceder a los datasets iniciales."""
+
+from google.colab import drive
+drive.mount('/content/drive')
+
+"""Se leen los tres datasets que se tienen y se les cambia el nombre para que sea más fácil y rápido manipularlos."""
+
+accvict = pd.read_csv('/content/drive/MyDrive/VIU/Mineria/TABLA_ACCVICT_2015.csv', sep=';', encoding='latin-1')
+pers = pd.read_csv('/content/drive/MyDrive/VIU/Mineria/TABLA_PERS_2015.csv', sep=';', encoding='latin-1')
+vehic = pd.read_csv('/content/drive/MyDrive/VIU/Mineria/TABLA_VEHIC_2015.csv', sep=';', encoding='latin-1')
+
+"""Se comprueba los tipos y la cantidad de instancias que se tiene."""
+
+print(accvict.shape)
+print(accvict.dtypes)
+
+print(pers.shape)
+print(pers.dtypes)
+
+print(vehic.shape)
+print(vehic.dtypes)
+
+"""Se observa qué variables de los conjuntos son numéricas."""
+
+accvict_numeric = accvict.select_dtypes(include=[np.number])
+numeric_cols = accvict_numeric.columns.values
+print(numeric_cols)
+
+pers_numeric = pers.select_dtypes(include=[np.number])
+numeric_cols = pers_numeric.columns.values
+print(numeric_cols)
+
+vehic_numeric = vehic.select_dtypes(include=[np.number])
+numeric_cols = vehic_numeric.columns.values
+print(numeric_cols)
+
+"""También se observa cuáles son las que no son numéricas."""
+
+accvict_non_numeric = accvict.select_dtypes(exclude=[np.number])
+non_numeric_cols = accvict_non_numeric.columns.values
+print(non_numeric_cols)
+
+pers_non_numeric = pers.select_dtypes(exclude=[np.number])
+non_numeric_cols = pers_non_numeric.columns.values
+print(non_numeric_cols)
+
+vehic_non_numeric = vehic.select_dtypes(exclude=[np.number])
+non_numeric_cols = vehic_non_numeric.columns.values
+print(non_numeric_cols)
+
+"""A partir de lo anterior se observa que el dataset "accvict" tiene 39 columnas y 97756 filas, el dataset "pers" tiene 31 columnas y 238476 filas y el dataset "vehic" tiene 14 columnas y 170749 filas. 
+Además se observa si todas las variables son numéricas o hay algunas que no lo son.
+
+###Missing values
+
+En este apartado se van a tratar los **missing values** o **valores faltantes** que son aquellos datos que faltan o no están disponibles en el dataset que se tiene. El motivo por el que faltan puede ser causado por diversos factores, como errores en la entrada de datos, errores de transmisión, o simplemente porque la información no existe o no fue recopilada en ese momento. Cuando faltan datos pueden haber problemas en el proceso de minería de datos porque se puede producir una interpretación incorrecta de los resultados o realizar un análisis incompleto. Es por este motivo que es importante abordar los valores faltantes mediante la eliminación de los registros, la imputación de valores a través de diversas técnicas estadísticas o de aprendizaje automático o una combinación de ambas técnicas para poder garantizar una mayor previsión y validez del análisis de los datos.
+
+####Missing Data Heatmap
+
+La técnica que se va a usar en este punto es un mapa de calor para poder visualizar si faltan datos mediante los colores en un mapa que se muestra a continuación.
+"""
+
+cols = accvict.columns[:40] # Se van a observar todas las columnas, ya que hay pocas.
+colours = ['#2F4F4F', '#E3CF57'] # El amarillo es faltante y el azul es no faltante.
+sns.heatmap(accvict[cols].isnull(), cmap=sns.color_palette(colours))
+
+cols = pers.columns[:32] # Se van a observar todas las columnas, ya que hay pocas.
+colours = ['#2F4F4F', '#E3CF57'] # El amarillo es faltante y el azul es no faltante.
+sns.heatmap(pers[cols].isnull(), cmap=sns.color_palette(colours))
+
+cols = vehic.columns[:15] # Se van a observar todas las columnas, ya que hay pocas.
+colours = ['#2F4F4F', '#E3CF57'] # El amarillo es faltante y el azul es no faltante.
+sns.heatmap(vehic[cols].isnull(), cmap=sns.color_palette(colours))
+
+"""En los tres gráficos anteriores aparecen los atributos en el eje horizontal y los registros en el eje vertical. El color azul representa los datos que se tienen y el color amarillo representa los datos faltantes. 
+Como se puede observar, los tres conjuntos de datos contienen datos faltantes.
+También se puede ver que esto ocurre con algunos de los atributos pero no pasa con todos.
+
+####Missing Data Percentage List
+
+Otra técnica que se puede utilizar es observar el porcentaje de datos faltantes para cada una de las características que se tienen en cada conjunto de datos.
+Esto es útil cuando se tiene un conjunto de características muy amplio.
+"""
+
+for col in accvict.columns:
+    pct_missing = np.mean(accvict[col].isnull())
+    print('{} - {}%'.format(col, round(pct_missing*100)))
+
+for col in pers.columns:
+    pct_missing = np.mean(pers[col].isnull())
+    print('{} - {}%'.format(col, round(pct_missing*100)))
+
+for col in vehic.columns:
+    pct_missing = np.mean(vehic[col].isnull())
+    print('{} - {}%'.format(col, round(pct_missing*100)))
+
+"""Como se puede observar en los resultados anteriores, esta técnica proporciona un porcentaje para cada uno de los atributos de cada conjunto de datos. 
+Es útil visualizarlo mediante porcentajes a la vez que poder ver el mapa de calor que se ha mostrado en la técnica anterior.
+
+####Missing Data Histogram
+
+Esta técnica es otra de las que se pueden usar para observar los datos faltantes. Consiste en visualizar mediante un histograma qué características tienen datos faltantes.
+"""
+
+for col in accvict.columns:
+    missing = accvict[col].isnull()
+    num_missing = np.sum(missing)
+    
+    if num_missing > 0:  
+        print('created missing indicator for: {}'.format(col))
+        accvict['{}_ismissing'.format(col)] = missing
+
+
+ismissing_cols = [col for col in accvict.columns if 'ismissing' in col]
+accvict['num_missing'] = accvict[ismissing_cols].sum(axis=1)
+
+accvict['num_missing'].value_counts().reset_index().sort_values(by='index').plot.bar(x='index', y='num_missing')
+
+for col in pers.columns:
+    missing = pers[col].isnull()
+    num_missing = np.sum(missing)
+    
+    if num_missing > 0:  
+        print('created missing indicator for: {}'.format(col))
+        pers['{}_ismissing'.format(col)] = missing
+
+
+ismissing_cols = [col for col in pers.columns if 'ismissing' in col]
+pers['num_missing'] = pers[ismissing_cols].sum(axis=1)
+
+pers['num_missing'].value_counts().reset_index().sort_values(by='index').plot.bar(x='index', y='num_missing')
+
+for col in vehic.columns:
+    missing = vehic[col].isnull()
+    num_missing = np.sum(missing)
+    
+    if num_missing > 0:  
+        print('created missing indicator for: {}'.format(col))
+        vehic['{}_ismissing'.format(col)] = missing
+
+
+ismissing_cols = [col for col in vehic.columns if 'ismissing' in col]
+vehic['num_missing'] = vehic[ismissing_cols].sum(axis=1)
+
+vehic['num_missing'].value_counts().reset_index().sort_values(by='index').plot.bar(x='index', y='num_missing')
+
+"""Con estos histogramas lo que se observa es la cantidad de valores perdidos que hay por registros que hay en los dataset. Por ejemplo, en este último histograma se observa que todo el conjunto de datos "vehic" contiene un valor perdido.
+
+###¿Qué hacer?
+
+En este apartado se llevan a cabo las acciones sobre los datos, se toman las decisiones de si se tienen que eliminar los datos o no.
+
+En este caso, el primer paso que se va a realizar va a ser decidir si dejar o no cada una de las características. 
+En el primer trabajo ya se analizaron los tres datasets para decidir qué características se podían usar para conseguir el objetivo propuesto.
+
+Para el primer dataset se seleccionaron los siguientes atributos:
+- MES
+- HORA
+- DIASEMANA
+-	PROVINCIA
+-	COMUNIDAD_AUTONOMA
+-	ISLA
+-	COD_MUNICIPIO
+-	TOT_VICTIMAS
+-	ZONA
+-	RED_CARRETERA
+-	TIPO_VIA
+-	TIPO_INTERSEC
+-	SUPERFICIE_CALZADA
+-	LUMINOSIDAD
+-	FACTORES_ATMOSFERICOS
+-	VISIBILIDAD_RESTRINGIDA
+
+####Eliminación de columnas
+
+Por lo tanto, el resto de atributos se van a eliminar, ya que no aportan valor al objetivo planteado.
+"""
+
+cols_to_drop = ['ANIO', 'MUNICIPIO', 'TOT_VICTIMAS30D', 'TOT_MUERTOS', 'TOT_MUERTOS30D', 'TOT_HERIDOS_GRAVES', 'TOT_HERIDOS_GRAVES30D', 'TOT_HERIDOS_LEVES', 'TOT_HERIDOS_LEVES30D', 'TOT_VEHICULOS_IMPLICADOS', 'ZONA_AGRUPADA', 'CARRETERA', 'TRAZADO_NO_INTERSEC', 'PRIORIDAD_AGENTE', 'PRIORIDAD_SEMAFORO', 'PRIORIDAD_STOP', 'PRIORIDAD_CEDA', 'PRIORIDAD_MARCAS', 'PRIORIDAD_PASO', 'PRIORIDAD_OTRA', 'ACERAS', 'TIPO_ACCIDENTE' ]
+accvict_col_necesarias = accvict.drop(cols_to_drop, axis=1)
+print(accvict_col_necesarias.shape)
+
+"""Para el segundo dataset únicamente se selecciona el siguiente atributo:
+- EDAD
+
+Por lo que el resto de columnas se eliminan del dataset.
+"""
+
+cols_to_drop = ['SEXO', 'ANIO_PERMISO', 'POSICION', 'USO_CINTURON', 'USO_SRI', 'USO_CASCO', 'MUERTO_24H', 'MUERTO_30D', 'HERIDO_GRAVE_24H', 'HERIDO_GRAVE30D', 'HERIDO_LEVE_24H', 'HERIDO_LEVE30D', 'DICCIONARIO_MANIOBRAS', 'MANIOBRAS', 'INFRACC_VELOCIDAD', 'INFRACC_COND', 'INFRACC_APERTURA', 'INFRACC_ALUMBRADO', 'INFRACC_CARGA_VEHICULO', 'INFRACC_RESUMEN', 'INFRACC_PEATON', 'DICCIONARIO_ACCION_PEATON', 'ACCION_PEATON', 'ANIO']
+pers_col_necesarias = pers.drop(cols_to_drop, axis=1)
+print(pers_col_necesarias.shape)
+
+"""Para el tercer dataset se ha seleccionado solamente el siguiente atributo:
+- ANIO_MATRICULA_VEHICULO
+Por lo tanto, el resto de atributos se eliminarán.
+"""
+
+cols_to_drop = ['ANIO', 'MES_MATRICULA_VEHICULO', 'TIPO_VEHICULO', 'ANOMALIA_NINGUNA', 'ANOMALIA_NEUMATICO', 'ANOMALIA_REVENTON', 'ANOMALIA_DIRECCION', 'ANOMALIA_FRENOS', 'NUMERO_OCUPANTES_VEH', 'MERCANCIAS_PELIGROSAS', 'VEHICULO_INCENDIADO', 'ANIO']
+vehic_col_necesarias = vehic.drop(cols_to_drop, axis=1)
+print(vehic_col_necesarias.shape)
+
+"""####Unión de los dataset
+
+En este punto se unirán los tres dataset para tener solamente un conjunto de datos.
+"""
+
+accvict_pers = pd.merge(accvict_col_necesarias, pers_col_necesarias, how = 'outer', left_index = True, right_index = True)
+
+accvict_pers_vehic = pd.merge(accvict_pers, vehic_col_necesarias, how = 'outer', left_index = True, right_index = True)
+
+"""Al tener el archivo con todo el conjunto de datos, se exporta a Drive y se descarga y además se observa qué atributos contiene. """
+
+accvict_pers_vehic.to_csv('accvict_pers_vehic.csv')
+!cp accvict_pers_vehic.csv "drive/MyDrive/VIU/Mineria/segundaConvocatoria"
+
+print(accvict_pers_vehic.shape)
+print(accvict_pers_vehic.dtypes)
+
+"""Se observa que hay columnas que se tienen que eliminar porque se han generado con la unión. Por lo que a continuación se realiza la eliminación de las mismas."""
+
+cols_to_drop = ['ISLA_ismissing', 'COD_MUNICIPIO_ismissing', 'MUNICIPIO_ismissing', 'CARRETERA_ismissing', 'TRAZADO_NO_INTERSEC_ismissing', 'TIPO_INTERSEC_ismissing', 'PRIORIDAD_AGENTE_ismissing', 'PRIORIDAD_SEMAFORO_ismissing', 'PRIORIDAD_STOP_ismissing', 'PRIORIDAD_CEDA_ismissing', 'PRIORIDAD_MARCAS_ismissing', 'PRIORIDAD_PASO_ismissing', 'PRIORIDAD_OTRA_ismissing', 'num_missing_x', 'ID_VEHICULO_ismissing', 'ID_CONDUCTOR_ismissing', 'ID_PASAJERO_ismissing', 'ID_PEATON_ismissing', 'ANIO_PERMISO_ismissing', 'POSICION_ismissing', 'USO_CINTURON_ismissing', 'USO_SRI_ismissing', 'USO_CASCO_ismissing', 'DICCIONARIO_MANIOBRAS_ismissing', 'MANIOBRAS_ismissing', 'INFRACC_VELOCIDAD_ismissing', 'INFRACC_COND_ismissing', 'INFRACC_APERTURA_ismissing', 'INFRACC_ALUMBRADO_ismissing', 'INFRACC_CARGA_VEHICULO_ismissing', 'INFRACC_RESUMEN_ismissing', 'INFRACC_PEATON_ismissing', 'DICCIONARIO_ACCION_PEATON_ismissing', 'ACCION_PEATON_ismissing', 'num_missing_y', 'VEHICULO_INCENDIADO_ismissing', 'num_missing' ]
+dataset_col_necesarias = accvict_pers_vehic.drop(cols_to_drop, axis=1)
+print(dataset_col_necesarias.shape)
+
+"""Se comprueba que ahora sí ya se tienen los atributos necesarios para realizar el análisis."""
+
+print(dataset_col_necesarias.shape)
+print(dataset_col_necesarias.dtypes)
+
+"""Volverá a realizar el análisis de los missing values para observar cómo ha quedado el dataset final después de la eliminación de atributos innecesarios para el objetivo."""
+
+cols = dataset_col_necesarias.columns[:28] # Se van a observar todas las columnas, ya que hay pocas.
+colours = ['#2F4F4F', '#E3CF57'] # El amarillo es faltante y el azul es no faltante.
+sns.heatmap(dataset_col_necesarias[cols].isnull(), cmap=sns.color_palette(colours))
+
+for col in dataset_col_necesarias.columns:
+    pct_missing = np.mean(dataset_col_necesarias[col].isnull())
+    print('{} - {}%'.format(col, round(pct_missing*100)))
+
+for col in dataset_col_necesarias.columns:
+    missing = dataset_col_necesarias[col].isnull()
+    num_missing = np.sum(missing)
+    
+    if num_missing > 0:  
+        print('created missing indicator for: {}'.format(col))
+        dataset_col_necesarias['{}_ismissing'.format(col)] = missing
+
+
+ismissing_cols = [col for col in dataset_col_necesarias.columns if 'ismissing' in col]
+dataset_col_necesarias['num_missing'] = dataset_col_necesarias[ismissing_cols].sum(axis=1)
+
+dataset_col_necesarias['num_missing'].value_counts().reset_index().sort_values(by='index').plot.bar(x='index', y='num_missing')
+
+"""####Eliminación de filas
+
+En este punto lo que se tiene que realizar es eliminar aquellas filas que tengan un alto porcentaje de atributos faltantes. 
+Como se observa en el análisis de missing values que se ha realizado anteriormente, hay una gran cantidad de datos a los que les faltan 19 características, pero si se observa el mapa de calor se puede ver que hay algunos de los atributos que ya tiene lógica que no tengan datos como son: IDCONDUCTOR y IDPEATON. Esto es debido a que aquellas personas que no eran conductoras en el momento del accidente tienen el registro vacío y lo mismo ocurre con el IDPEATON, por lo que se omitirán estos dos atributos y se eliminarán aquellos registros que les falten 17 columnas.
+"""
+
+ind_missing = dataset_col_necesarias[dataset_col_necesarias['num_missing'] > 16].index
+dataset_less_rows = dataset_col_necesarias.drop(ind_missing, axis=0)
+print(dataset_less_rows.shape)
+
+"""En este punto se vuelve a comprobar los missing values del dataset."""
+
+cols = dataset_less_rows.columns[:28] # Se van a observar todas las columnas, ya que hay pocas.
+colours = ['#2F4F4F', '#E3CF57'] # El amarillo es faltante y el azul es no faltante.
+sns.heatmap(dataset_less_rows[cols].isnull(), cmap=sns.color_palette(colours))
+
+for col in dataset_less_rows.columns:
+    pct_missing = np.mean(dataset_less_rows[col].isnull())
+    print('{} - {}%'.format(col, round(pct_missing*100)))
+
+for col in dataset_less_rows.columns:
+    missing = dataset_less_rows[col].isnull()
+    num_missing = np.sum(missing)
+    
+    if num_missing > 0:  
+        print('created missing indicator for: {}'.format(col))
+        dataset_less_rows['{}_ismissing'.format(col)] = missing
+
+
+ismissing_cols = [col for col in dataset_less_rows.columns if 'ismissing' in col]
+dataset_less_rows['num_missing'] = dataset_less_rows[ismissing_cols].sum(axis=1)
+
+dataset_less_rows['num_missing'].value_counts().reset_index().sort_values(by='index').plot.bar(x='index', y='num_missing')
+
+"""Dados los anteriores resultados lo que se realiza es eliminar aquellos atributos que no tienen relevancia por lo que se eliminan las columnas:
+- ISLA
+- ID_PASAJERO
+- ID_PEATON
+"""
+
+cols_to_drop = ['ISLA', 'ID_PASAJERO', 'ID_PEATON']
+dataset_col_relevantes = dataset_less_rows.drop(cols_to_drop, axis=1)
+print(dataset_col_relevantes.shape)
+
+"""A continuación, se realiza el mapa de calor para comprobar que se ha realizado correctamente."""
+
+cols = dataset_col_relevantes.columns[:28] # Se van a observar todas las columnas, ya que hay pocas.
+colours = ['#2F4F4F', '#E3CF57'] # El amarillo es faltante y el azul es no faltante.
+sns.heatmap(dataset_col_relevantes[cols].isnull(), cmap=sns.color_palette(colours))
+
+"""####Tratar los desaparecidos
+
+En este apartado se van a tratar aquellas columnas que tengan valores faltantes. En este caso el dataset contiene dos columnas con datos faltantes:
+- COD_MUNICIPIO
+- TIPO_INTERSEC
+
+El código del municipio es una de las características que se tienen en cuenta para abordar el objetivo por lo que aquellas filas con este valor desaparecido se sustituirán por un 0. En cuanto al tipo de intersección se ha visto en el trabajo primero que cuando no hay ningún valor especificado es porque no se trata de una intersección por lo que, en este caso, los valores faltantes también se sustituirán por un 0.
+"""
+
+dataset_col_relevantes['TIPO_INTERSEC'] = dataset_col_relevantes['TIPO_INTERSEC'].fillna(0)
+dataset_col_relevantes['COD_MUNICIPIO'] = dataset_col_relevantes['COD_MUNICIPIO'].fillna(0)
+
+cols = dataset_col_relevantes.columns[:28] # Se van a observar todas las columnas, ya que hay pocas.
+colours = ['#2F4F4F', '#E3CF57'] # El amarillo es faltante y el azul es no faltante.
+sns.heatmap(dataset_col_relevantes[cols].isnull(), cmap=sns.color_palette(colours))
+
+"""Como se puede observar ahora ya se tienen todas las columnas necesarias y llenas de datos.
+Se observan las columnas que han quedado para ver si hay alguna innecesaria.
+"""
+
+print(dataset_col_relevantes.shape)
+print(dataset_col_relevantes.dtypes)
+
+"""Se eliminan las columnas que ya no son necesarias que son las que tienen el sufijo "ismissing"."""
+
+cols_to_drop = ['ID_ACCIDENTE_x_ismissing', 'MES_ismissing', 'HORA_ismissing', 'DIASEMANA_ismissing', 'PROVINCIA_ismissing', 'COMUNIDAD_AUTONOMA_ismissing', 'ISLA_ismissing', 'COD_MUNICIPIO_ismissing', 'TOT_VICTIMAS_ismissing', 'ZONA_ismissing', 'RED_CARRETERA_ismissing', 'TIPO_VIA_ismissing', 'TIPO_INTERSEC_ismissing', 'SUPERFICIE_CALZADA_ismissing', 'LUMINOSIDAD_ismissing', 'FACTORES_ATMOSFERICOS_ismissing', 'VISIBILIDAD_RESTRINGIDA_ismissing', 'ID_VEHICULO_x_ismissing', 'ID_CONDUCTOR_ismissing', 'ID_PASAJERO_ismissing', 'ID_PEATON_ismissing', 'ID_ACCIDENTE_ismissing', 'ID_VEHICULO_y_ismissing', 'ANIO_MATRICULA_VEHICULO_ismissing', 'num_missing']
+dataset_sin_ismissing = dataset_less_rows.drop(cols_to_drop, axis=1)
+print(dataset_sin_ismissing.shape)
+
+print(dataset_sin_ismissing.shape)
+print(dataset_sin_ismissing.dtypes)
+
+"""###Outliers
+
+En este apartado se van a tratar los outliers.
+Los valores atípicos o outliers son valores que están fuera del rango de las demás observaciones de la misma categoría. Pueden ser valores verdaderos que sean atípicos o que se trate de errores.
+Para tratarlos se usan diferentes técnicas que se utilizarán a continuación.
+
+####Histograma
+"""
+
+# Histograma de MES.
+dataset_sin_ismissing['MES'].hist(bins=100)
+
+# Box plot.
+dataset_sin_ismissing.boxplot(column=['MES'])
+
+# Histograma de HORA.
+dataset_sin_ismissing['HORA'].hist(bins=100)
+
+# Box plot.
+dataset_sin_ismissing.boxplot(column=['HORA'])
+
+# Histograma de DIASEMANA.
+dataset_sin_ismissing['DIASEMANA'].hist(bins=100)
+
+# Box plot.
+dataset_sin_ismissing.boxplot(column=['DIASEMANA'])
+
+# Histograma de PROVINCIA.
+dataset_sin_ismissing['PROVINCIA'].hist(bins=100)
+
+# Box plot.
+dataset_sin_ismissing.boxplot(column=['PROVINCIA'])
+
+# Histograma de COMUNIDAD_AUTONOMA.
+dataset_sin_ismissing['COMUNIDAD_AUTONOMA'].hist(bins=100)
+
+# Box plot.
+dataset_sin_ismissing.boxplot(column=['COMUNIDAD_AUTONOMA'])
+
+# Histograma de ISLA.
+dataset_sin_ismissing['ISLA'].hist(bins=100)
+
+# Box plot.
+dataset_sin_ismissing.boxplot(column=['ISLA'])
+
+# Histograma de COD_MUNICIPIO.
+dataset_sin_ismissing['COD_MUNICIPIO'].hist(bins=100)
+
+# Box plot.
+dataset_sin_ismissing.boxplot(column=['COD_MUNICIPIO'])
+
+# Histograma de TOT_VICTIMAS.
+dataset_sin_ismissing['TOT_VICTIMAS'].hist(bins=100)
+
+# Box plot.
+dataset_sin_ismissing.boxplot(column=['TOT_VICTIMAS'])
+
+# Histograma de ZONA.
+dataset_sin_ismissing['ZONA'].hist(bins=100)
+
+# Box plot.
+dataset_sin_ismissing.boxplot(column=['ZONA'])
+
+# Histograma de RED_CARRETERA.
+dataset_sin_ismissing['RED_CARRETERA'].hist(bins=100)
+
+# Box plot.
+dataset_sin_ismissing.boxplot(column=['RED_CARRETERA'])
+
+# Histograma de TIPO_VIA.
+dataset_sin_ismissing['TIPO_VIA'].hist(bins=100)
+
+# Box plot.
+dataset_sin_ismissing.boxplot(column=['TIPO_VIA'])
+
+# Histograma de TIPO_INTERSEC.
+dataset_sin_ismissing['TIPO_INTERSEC'].hist(bins=100)
+
+# Box plot.
+dataset_sin_ismissing.boxplot(column=['TIPO_INTERSEC'])
+
+# Histograma de SUPERFICIE_CALZADA.
+dataset_sin_ismissing['SUPERFICIE_CALZADA'].hist(bins=100)
+
+# Box plot.
+dataset_sin_ismissing.boxplot(column=['SUPERFICIE_CALZADA'])
+
+# Histograma de LUMINOSIDAD.
+dataset_sin_ismissing['LUMINOSIDAD'].hist(bins=100)
+
+# Box plot.
+dataset_sin_ismissing.boxplot(column=['LUMINOSIDAD'])
+
+# Histograma de FACTORES_ATMOSFERICOS.
+dataset_sin_ismissing['FACTORES_ATMOSFERICOS'].hist(bins=100)
+
+# Box plot.
+dataset_sin_ismissing.boxplot(column=['FACTORES_ATMOSFERICOS'])
+
+# Histograma de VISIBILIDAD_RESTRINGIDA.
+dataset_sin_ismissing['VISIBILIDAD_RESTRINGIDA'].hist(bins=100)
+
+# Box plot.
+dataset_sin_ismissing.boxplot(column=['VISIBILIDAD_RESTRINGIDA'])
+
+# Histograma de EDAD.
+dataset_sin_ismissing['EDAD'].hist(bins=100)
+
+# Box plot.
+dataset_sin_ismissing.boxplot(column=['EDAD'])
+
+# Histograma de ANIO_MATRICULA_VEHICULO.
+dataset_sin_ismissing['ANIO_MATRICULA_VEHICULO'].hist(bins=100)
+
+# Box plot.
+dataset_sin_ismissing.boxplot(column=['ANIO_MATRICULA_VEHICULO'])
+
+"""Viendo las gráficas de outliers anteriores se puede sacar que algunos de los atributos contienen valores atípicos. En este apartado se va a analizar el porqué de cada uno de ellos:
+- **TOT_VICTIMAS**: Tiene algunos valores altos. Esto sucede porque la mayoría de los accidentes ocurren para un volumen pequeño de personas y algunos puntualmente ocurren para un volumen mayor de personas.
+- **RED_CARRETERA**: Tiene valores que corresponden a 1 que en el dataset equivalen a carreteras estatales, por lo tanto es información de valor.
+- **SUPERFICIE_CALZADA**: Tiene valores que corresponden a 999 que se corresponde a que no se tiene la información.
+- **LUMINOSIDAD**: Tiene algunos valores que corresponden a 4 y que en el dataset significa que el accidente se produjo de noche y con una iluminación insuficiente, por lo que es información relevante para el análisis.
+- **FACTORES_ATMOSFERICOS**: Contiene algunos valores correspondientes a 999 que significa que no se tiene los datos.
+- **VISIBILIDAD RESTRINGIDA**: Tiene algunos valores que justamente se corresponden con los datos de valor, ya que están entre el 0 y el 8.
+- **EDAD**: Tiene algunos valores equivalentes a 999 que significa que no se tiene el dato.
+
+Después de este breve análisis se tiene que valorar si se tienen que eliminar los valores atípicos para cada atributo, ajustarlos o conservarlos. Como ya se ha comentado en cada una de las características, para algunos de ellos como son "TOT_VICTIMAS", "RED_CARRETERA", "LUMINOSIDAD" y "VISIBILIDAD RESTRINGIDA".
+
+Los atributos que contienen datos que entorpecen el análisis son "SUPERFICIE_CALZADA", "FACTORES_ATMOSFERICOS", "EDAD". En estas tres características, se cogerá la mediana de los valores para sustituirlos.
+
+###Datos innecesarios
+
+En este apartado se van a tratar los datos innecesarios que contiene el dataset y que únicamente lo que provocarían sería entorpecer el análisis, ya que no aportan valor para lograr el objetivo que se persigue.
+Lo que se va a realizar va a ser un análisis de los datos desinformativos o repetitivos, los irrelevantes y los duplicados.
+
+####Datos desinformativos o repetitivos
+
+En este apartado se van a tratar los datos desinformativos o repetitivos dentro del dataset. 
+Cuando una característica tiene muchas filas con el mismo valor puede que no aporte mucho valor para el objetivo que se quiere conseguir, aunque siempre es importante tener en cuenta cada característica en particular para valorar si es importante mantenerla o no.
+
+Para esta primera medida lo que se realiza es mostrar aquellas características que tienen más del 95% de las finas con el mismo valor.
+"""
+
+num_rows = len(dataset_sin_ismissing.index)
+low_information_cols = [] #
+
+for col in dataset_sin_ismissing.columns:
+    cnts = dataset_sin_ismissing[col].value_counts(dropna=False)
+    top_pct = (cnts/num_rows).iloc[0]
+    
+    if top_pct > 0.95:
+        low_information_cols.append(col)
+        print('{0}: {1:.5f}%'.format(col, top_pct*100))
+        print(cnts)
+        print()
+
+"""Observando los resultados arrojados anteriormente se obtiene que  las características que servirán para el posterior análisis no aparecen, por lo que, en este caso, no hay valores repetitivos o desinformativos.
+
+####Datos irrelevantes
+
+En este paso lo que se realiza es analizar aquellas características que son irrelevantes para el posterior análisis de los datos. Este paso ya se ha realizado en apartados posteriores y se han eliminado aquellas características que se han considerado como no relevantes.
+
+####Datos duplicados
+
+Por último se analiza si existen datos duplicados en los datos para más de una característica. 
+
+Lo que se realiza en este paso es observar los duplicados para las características.
+"""
+
+key = ['MES', 'HORA', 'DIASEMANA', 'PROVINCIA', 'COMUNIDAD_AUTONOMA', 'ISLA', 'COD_MUNICIPIO', 'TOT_VICTIMAS', 'ZONA', 'RED_CARRETERA', 'TIPO_VIA', 'TIPO_INTERSEC', 'SUPERFICIE_CALZADA', 'LUMINOSIDAD', 'FACTORES_ATMOSFERICOS', 'VISIBILIDAD_RESTRINGIDA', 'EDAD', 'ANIO_MATRICULA_VEHICULO']
+
+dataset_sin_ismissing.fillna(-999).groupby(key)['ID_ACCIDENTE'].count().sort_values(ascending=False).head(20)
+
+"""Lo que se puede realizar es eliminar estos datos que han aparecido duplicados de la siguiente forma."""
+
+key = ['MES', 'HORA', 'DIASEMANA', 'PROVINCIA', 'COMUNIDAD_AUTONOMA', 'ISLA', 'COD_MUNICIPIO', 'TOT_VICTIMAS', 'ZONA', 'RED_CARRETERA', 'TIPO_VIA', 'TIPO_INTERSEC', 'SUPERFICIE_CALZADA', 'LUMINOSIDAD', 'FACTORES_ATMOSFERICOS', 'VISIBILIDAD_RESTRINGIDA', 'EDAD', 'ANIO_MATRICULA_VEHICULO']
+dataset_sin_ismissing_dedupped2 = dataset_sin_ismissing.drop_duplicates(subset=key)
+
+print(dataset_sin_ismissing.shape)
+print(dataset_sin_ismissing_dedupped2.shape)
+
+"""###Datos inconsistentes
+
+En este apartado se va a realizar el análisis de los datos inconsistentes.
+
+####Capitalización
+
+Para los datos inconsistentes una de las técnicas que se realiza es el análisis de la capitalización en los datos. Esto sirve cuando los datos son de tipo categórico. En este caso, los datos son todos numéricos, por lo que esta técnica no sirve.
+
+####Formato
+
+En este apartado se tiene en cuenta el formato que tienen los datos.
+
+Lo que se va a realizar va a ser observar los datos que contiene el dataset.
+"""
+
+dataset_sin_ismissing
+
+"""En este caso, todos los datos ya son numéricos, por lo que no se tiene que realizar ningún cambio.
+
+##Dataset final
+
+En este apartado se va a presentar el dataset resultante de todo el trabajo de limpieza de los datos.
+"""
+
+dataset = dataset_sin_ismissing
+dataset
