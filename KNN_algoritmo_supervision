@@ -1,6 +1,6 @@
-# <center>PRÁCTICA 2: APRENDIZAJE SUPERVISADO (DengAI)<center>
+# <center>APRENDIZAJE SUPERVISADO (DengAI)<center>
 
-En el presente trabajo se van a realizar algoritmos para predecir la variable "total_cases" que trata de saber la cantidad de casos de Dengue que habrá para unas fechas y unos valores de características concretos.
+Se van a realizar algoritmos para predecir la variable "total_cases" que trata de saber la cantidad de casos de Dengue que habrá para unas fechas y unos valores de características concretos.
 
 El algoritmo que se va a usar es el **algoritmo de supervisión KNN** (K-nearest neighbors) que trata de predecir la variable que se quiera buscan a partir del análisis de regresión de unos datos que contienen las etiquetas, es decir, los valores a predecir. De esta forma el algoritmo aprende y se puede usar para predecir unos datos que ya no contienen la etiqueta en cuestión.
 
@@ -25,8 +25,6 @@ El trabajo se ha dividido en varios apartados. Primero se ha realizado todo el p
 #KNN con 8 características
 ---
 ---
-
-**Estudiante**: Joana Rodríguez Vallecillos
 
 **Datos del modelo final elegido**
 * MAE test (DrivenData): 26.9159
